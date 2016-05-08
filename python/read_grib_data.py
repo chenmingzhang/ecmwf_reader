@@ -61,6 +61,8 @@ datetime.datetime(1979, 1, 1, 0, 0)
 0
 >>> grb.__getattribute__('centuryOfReferenceTimeOfData')
 20
+>>> grb['units']
+u'm of water equivalent'
 
 >>> grb['validityTime']  # this is the data i am after
 900
