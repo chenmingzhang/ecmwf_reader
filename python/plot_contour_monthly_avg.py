@@ -6,26 +6,26 @@ import datetime
 
 #grbs_evap.seek(0)
 #grbs_rain.seek(0)
-#no_evp=0
+#no_evap=0
 #evp_max=0
 #evp_min=0
 #f  = ('output_file_test.txt','w')
 #for n in grbs_evap:
-#    no_evp+=1
-#    grb1 = grbs_evap.read(1)[0]
-#    print str(no_evp) , str(grb1)
-#    f.write( str(no_evp ), grb1)
-#    evap= grb1.values
+#    no_evap+=1
+#    grb_evap_current = grbs_evap.read(1)[0]
+#    print str(no_evap) , str(grb_evap_current)
+#    f.write( str(no_evap ), grb_evap_current)
+#    evap= grb_evap_current.values
 #    evp_max=np.amin([np.amax(evap),evp_min])
 #    evp_min=np.amin([np.amin(evap),evp_min])
 #
-#print 'Total evaporation data numer is',str(no_evp)
+#print 'Total evaporation data numer is',str(no_evap)
 #
 #no_rain=0
 #for n in grbs_rain:
 #    no_rain+=1
-#    grb1 = grbs_rain.read(1)[0]
-#    evap= grb1.values
+#    grb_evap_current = grbs_rain.read(1)[0]
+#    evap= grb_evap_current.values
 #    evp_max=np.amin([np.amax(evap),evp_min])
 #    evp_min=np.amin([np.amin(evap),evp_min])
 #print 'Total evaporation data numer is',str(no_rain)
@@ -44,34 +44,34 @@ rain_monthly=0
 #for n in grbs_evap:
 #for n in [0,1,2,3,4,5,6,7]:
 # it is found that using the previous method can not get the size of the each grib object.
-no_evp=2189
+no_evap=2189
 no_rain=2189
-for n in np.arange(no_evp):
+for n in np.arange(no_evap):
 #for n in np.arange(186):
 
 
-    grb1 = grbs_evap.read(1)[0]
-    data_date=grb1.__getattribute__('analDate')+datetime.timedelta(hours=grb1.__getattribute__('validityTime')/100)
+    grb_evap_current = grbs_evap.read(1)[0]
+    data_date=grb_evap_current.__getattribute__('analDate')+datetime.timedelta(hours=grb_evap_current.__getattribute__('validityTime')/100)
 
-    grb2 = grbs_rain.read(1)[0]
-    data_date_rain=grb2.__getattribute__('analDate')+datetime.timedelta(hours=grb2.__getattribute__('validityTime')/100)
+    grb_rain_current = grbs_rain.read(1)[0]
+    data_date_rain=grb_rain_current.__getattribute__('analDate')+datetime.timedelta(hours=grb_rain_current.__getattribute__('validityTime')/100)
     
     date_current=int(data_date.strftime("%d"))
     month_current=int(data_date.strftime("%m"))
 
     print str(n)+str(month_current)+str(month_previous)
-    if (n+1!=no_evp and month_current==month_previous): # same day
+    if (n+1!=no_evap and month_current==month_previous): # same day
         print 'Processing time'+ unicode(data_date)+ ', in a same month as previous month, which is '+ str(month_previous)
-        evap= grb1.values  # (256, 512)
+        evap= grb_evap_current.values  # (256, 512)
         evap_monthly=evap_monthly+evap
-        rain= grb2.values  # (256, 512)
+        rain= grb_rain_current.values  # (256, 512)
         rain_monthly=rain_monthly+rain
         data_date_previous_step=data_date_rain
 
 
-    elif ((n+1==no_evp and month_current==month_previous) or month_current!=month_previous):
+    elif ((n+1==no_evap and month_current==month_previous) or month_current!=month_previous):
         print 'Processing time'+ unicode(data_date)+ ', reached a new month. now drawing new graph' 
-        lats, lons = grb1.latlons()  # (256, 512)
+        lats, lons = grb_evap_current.latlons()  # (256, 512)
         fig=plt.figure(figsize=(20,15))
         ax1 = fig.add_subplot(311)
         ax2 = fig.add_subplot(312)
@@ -96,7 +96,7 @@ for n in np.arange(no_evp):
         print 'the max evap is: '+str(np.max(evap_monthly))+'m, minimum evap is: '+ str(np.min(evap_monthly))+' m'
 
 
-        lats, lons = grb2.latlons()  # (256, 512)
+        lats, lons = grb_rain_current.latlons()  # (256, 512)
         im=ax2.contourf(lons,lats,rain_monthly)
         ax2.set_ylabel('latitude')
         ax2.set_xlabel('longitude')
