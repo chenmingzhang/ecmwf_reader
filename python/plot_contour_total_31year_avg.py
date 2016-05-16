@@ -125,3 +125,7 @@ plt.close(fig)
 #rain_total_rate_mmday=evap_total_raw*1000/day_count_all    # convert from negative m per day to positive mm per day
 
 
+np.savetxt('total_32_avg_evap_mmday.csv',evap_total_rate_mmday , delimiter=",")
+np.savetxt('total_32_avg_rain_mmday.csv', rain_total_rate_mmday, delimiter=",")
+np.savetxt('total_32_avg_net_evap_mmday.csv',
+    evap_total_rate_mmday-rain_total_rate_mmday, delimiter=",")
