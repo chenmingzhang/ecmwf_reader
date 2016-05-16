@@ -66,14 +66,62 @@ class Station:
     author = "Nobody has claimed to make this shape yet"
 
     def plot_stations(self):
+        import matplotlib.pyplot as plt
+        fig=plt.figure(figsize=(20,15))
+        plt.plot(self.longitude,self.latitude,'r+')
+        plt.ylabel('latitude')
+        plt.xlabel('longitude')
+        fig.savefig('station_location.png',format='png')
+        #return fig.show()
 
 
     def find_lats_lons_idx_from_mtx(self,lats,lons):
+        import operator
         lats_ay=lats[:,1]
         lons_ay=lons[1,:]
+        self.lats_idx=np.zeros(self.station_no,dtype=int)
+        self.lons_idx=np.zeros(self.station_no,dtype=int)
         for n in np.arange(self.station_no):
-            
-        return a
+            #http://stackoverflow.com/questions/2474015/getting-the-index-of-the-returned-max-or-min-item-using-max-min-on-a-list
+            self.lats_idx[n], min_value = min(enumerate(abs(a.latitude[n] -lats_ay)), key=operator.itemgetter(1))
+            self.lons_idx[n], max_value = min(enumerate(abs(a.longitude[n]-lons_ay)), key=operator.itemgetter(1))
+
+    def extract_value_at_stations(self,evap_yearly_raw,rain_yearly_raw,lats,lons,day_count_yearly):
+        # define a list of empty np array:
+        #result = [np.zeros(5) for _ in xrange(3)]
+        # result = [np.random.rand(5) for _ in xrange(3)]
+        # get the first column
+        # b=[result[n][0] for n in xrange(2)]   # this ends up with a list
+        # c=c=np.array([result[n][0] for n in xrange(2)])   # this ends up with a np array
+        self.evap_annual_mmday    = [np.zeros(self.station_no,dtype=float) for _ in np.arange(day_count_yearly.size)]   
+        self.rain_annual_mmday    = [np.zeros(self.station_no,dtype=float) for _ in np.arange(day_count_yearly.size)]   
+        self.net_evap_annual_mmday= [np.zeros(self.station_no,dtype=float) for _ in np.arange(day_count_yearly.size)]   
+        self.evap_avg_mmday       = np.zeros(self.station_no,dtype=float)
+        self.rain_avg_mmday       = np.zeros(self.station_no,dtype=float)
+        self.net_evap_avg_mmday   = np.zeros(self.station_no,dtype=float)
+        self.days_annual=days_count_yearly
+
+        for n in np.arange(day_count_yearly.size):
+           # although we plot evap and rain by plot(lons,lats,evap), the evap and rain is stored by evap[lats, lons, steps]
+           self.evap_annual_mmday[n]     = -evap_yearly_raw[self.lats_idx,self.lons_idx,n]*1000/day_count_yearly[n]
+           self.rain_annual_mmday[n]     = rain_yearly_raw[self.lats_idx,self.lons_idx,n]*1000/day_count_yearly[n]
+           self.net_evap_annual_mmday[n] = self.evap_annual_mmday[n]-self.rain_annual_mmday[n]
+        
+
+    def interpolate_values_as_mtx(self,lats,lons):
+        from scipy.interpolate import griddata
+        self.lats_mtx=lats
+        self.lons_mtx=lons
+        self.interp_evap_annual_mmday_mtx    = [np.zeros(lats.shape,dtype=float) for _ in np.arange(day_count_yearly.size)]
+        self.interp_rain_annual_mmday_mtx    = [np.zeros(lats.shape,dtype=float) for _ in np.arange(day_count_yearly.size)]
+        self.interp_net_evap_annual_mmday_mtx= [np.zeros(lats.shape,dtype=float) for _ in np.arange(day_count_yearly.size)]
+
+        for n in np.arange(self.days_annual.size):
+            self.interp_evap_annual_mmday_mtx[n] = griddata(np.vstack([self.latitude,self.longitude]), self.evap_annual_mmday[n], (self.lats_mtx, self.lons_mtx), method='cubic')
+            self.interp_rain_annual_mmday_mtx[n] = griddata(np.vstack([self.latitude,self.longitude]), self.rain_annual_mmday[n], (self.lats_mtx, self.lons_mtx), method='cubic')
+        
+
+        
         
     def area(self):
         return self.x * self.y
