@@ -99,7 +99,8 @@ class Station:
         self.evap_avg_mmday       = np.zeros(self.station_no,dtype=float)
         self.rain_avg_mmday       = np.zeros(self.station_no,dtype=float)
         self.net_evap_avg_mmday   = np.zeros(self.station_no,dtype=float)
-        self.days_annual=days_count_yearly
+        #self.days_annual          = np.zeros(days_count_yearly.size,dtype=float)
+        self.days_annual=day_count_yearly
 
         for n in np.arange(day_count_yearly.size):
            # although we plot evap and rain by plot(lons,lats,evap), the evap and rain is stored by evap[lats, lons, steps]
@@ -117,11 +118,118 @@ class Station:
         self.interp_net_evap_annual_mmday_mtx= [np.zeros(lats.shape,dtype=float) for _ in np.arange(day_count_yearly.size)]
 
         for n in np.arange(self.days_annual.size):
-            self.interp_evap_annual_mmday_mtx[n] = griddata(np.vstack([self.latitude,self.longitude]), self.evap_annual_mmday[n], (self.lats_mtx, self.lons_mtx), method='cubic')
-            self.interp_rain_annual_mmday_mtx[n] = griddata(np.vstack([self.latitude,self.longitude]), self.rain_annual_mmday[n], (self.lats_mtx, self.lons_mtx), method='cubic')
+            # transpose a 1-D np array is not trivial
+            # http://stackoverflow.com/questions/19238024/transpose-of-a-vector-using-numpy
+            # data format for gridata
+            #  http://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.interpolate.griddata.html
+            #  gridata(x and y(1000,2),value(1000),[500 500],method=cubic)
+            # several takes in gridata
+            # 1. it doesn't extrapolate
+            # 2. cubic tends to over estimate
+            # 3. linear is good but not very accurate
+            # 4. nearest is the most uggly one
+            self.interp_evap_annual_mmday_mtx[n] = griddata(np.hstack([self.latitude[np.newaxis, :].T,self.longitude[np.newaxis, :].T]), self.evap_annual_mmday[n], (self.lats_mtx, self.lons_mtx), method='cubic(2-D)')
+            self.interp_rain_annual_mmday_mtx[n] = griddata(np.hstack([self.latitude[np.newaxis, :].T,self.longitude[np.newaxis, :].T]), self.rain_annual_mmday[n], (self.lats_mtx, self.lons_mtx), method='cubic(2-D)')
+            self.interp_net_evap_annual_mmday_mtx[n] = self.interp_evap_annual_mmday_mtx[n] -self.interp_rain_annual_mmday_mtx[n] 
+        # it is funny that python doesn't have a function to average a list
+        # http://stackoverflow.com/questions/9039961/finding-the-average-of-a-list
+        self.interp_evap_total_avg_mmday_mtx = sum(self.interp_evap_annual_mmday_mtx)/float(len(self.interp_evap_annual_mmday_mtx))
+        self.interp_rain_total_avg_mmday_mtx = sum(self.interp_rain_annual_mmday_mtx)/float(len(self.interp_rain_annual_mmday_mtx))
+        self.interp_net_evap_total_avg_mmday_mtx=self.interp_evap_total_avg_mmday_mtx-self.interp_rain_total_avg_mmday_mtx
         
+    def plot_interpolated_annual_avg_result(self):
+        for n in np.arange(len(self.days_annual)):
+            fig=plt.figure(figsize=(20,25))
+            ax1 = fig.add_subplot(311)
+            ax2 = fig.add_subplot(312)
+            ax3 = fig.add_subplot(313)
+            #v = np.linspace(-0.02,0.02, 21, endpoint=True)
+            
+            im=ax1.contourf(self.lons_mtx,self.lats_mtx,self.interp_evap_annual_mmday_mtx[n]) #,levels=v)
+            ax1.plot(self.longitude,self.latitude,'r+')
+            ax1.set_ylabel('latitude')
+            ax1.set_title('Interpolated average Evaporation (mm/day) in '+str(1979+n))
+            fig.colorbar(im,ax=ax1) #,ticks=v)
+            #print 'the max evap is: '+str(np.max(evap_total))+'m, minimum evap is: '+ str(np.min(evap_total))+' m'
+            #
+            #
+            im=ax2.contourf(self.lons_mtx,self.lats_mtx,self.interp_rain_annual_mmday_mtx[n]) #,levels=v)
+            ax2.plot(self.longitude,self.latitude,'r+')
+            ax2.set_ylabel('latitude')
+            ax2.set_title('Interpolated average Precipitation (mm/day) in '+str(1979+n))
+            fig.colorbar(im,ax=ax2)
+            #print 'the max rain is: '+str(np.max(rain_total))+'m, minimum evap is: '+ str(np.min(rain_total))+' m'
+            #
+            ##print 'Processing time'+ unicode(data_date_rain)+ ', for precipitation finished'+str(lats.shape)
+            #
+            im=ax3.contourf(self.lons_mtx,self.lats_mtx,self.interp_net_evap_annual_mmday_mtx[n]) #,levels=v)
+            ax3.plot(self.longitude,self.latitude,'r+')
+            ax3.set_title('Interploated average Evaporation-precipitation (mm/day) in ' +str(1979+n))
+            ax3.set_ylabel('latitude')
+            ax3.set_xlabel('longitude')
+            #ax3.set_title('Precipitation + evaporation (m) at UTC time: '
+            #    +unicode(data_date)+ ' or Beijing time:'
+            #    +unicode(data_date+datetime.timedelta(hours=+8) ))
+            fig.colorbar(im,ax=ax3)
+            #fig.show()
+            #
+            print 'interpolated_average_evaporatoin_rain_in_year_'+ str(1979+n)+'.png'
+            fig_name='interpolated_average_evaporatoin_rain_in_year_'+ str(1979+n)+'.png'
+            csv_name_rain='interpolated_annual_average_evaporation_mmday_in_year_'+str(1979+n)+'.csv'
+            csv_name_evap='interpolated_annual_average_rain_mmday_in_year_'+str(1979+n)+'.csv'
+            csv_name_total='interpolated_annual_average_net_evaporation_mmday_in_year_'+str(1979+n)+'.csv'
+            
+            #np.savetxt(csv_name_rain, evap_annual_avg_mmday, delimiter=",")
+            #np.savetxt(csv_name_evap, rain_annual_avg_mmday, delimiter=",")
+            #np.savetxt(csv_name_total, evap_annual_avg_mmday-rain_annual_avg_mmday, delimiter=",")
+            fig.savefig(fig_name,format='png')
+            plt.close(fig)
+        
+    def plot_interpolated_total_avg_result(self):
+            fig=plt.figure(figsize=(20,25))
+            ax1 = fig.add_subplot(311)
+            ax2 = fig.add_subplot(312)
+            ax3 = fig.add_subplot(313)
+            #v = np.linspace(-0.02,0.02, 21, endpoint=True)
+        
+            
+            im=ax1.contourf(self.lons_mtx,self.lats_mtx,self.interp_evap_total_avg_mmday_mtx) #,levels=v)
+            ax1.plot(self.longitude,self.latitude,'r+')
+            ax1.set_ylabel('latitude')
+            ax1.set_title('Interpolated average Evaporation (mm/day) in '+str(1979+n))
+            fig.colorbar(im,ax=ax1) #,ticks=v)
+            #print 'the max evap is: '+str(np.max(evap_total))+'m, minimum evap is: '+ str(np.min(evap_total))+' m'
+            #
+            #
+            im=ax2.contourf(self.lons_mtx,self.lats_mtx,self.interp_rain_annual_mmday_mtx[n]) #,levels=v)
+            ax2.plot(self.longitude,self.latitude,'r+')
+            ax2.set_ylabel('latitude')
+            ax2.set_title('Interpolated average Precipitation (mm/day) in '+str(1979+n))
+            fig.colorbar(im,ax=ax2)
+            #print 'the max rain is: '+str(np.max(rain_total))+'m, minimum evap is: '+ str(np.min(rain_total))+' m'
+            #
+            ##print 'Processing time'+ unicode(data_date_rain)+ ', for precipitation finished'+str(lats.shape)
+            im=ax3.contourf(self.lons_mtx,self.lats_mtx,self.interp_rain_total_avg_mmday_mtx) #,levels=v)
+            ax3.plot(self.longitude,self.latitude,'r+')
+            ax3.set_title('Interploated average Evaporation-precipitation (mm/day) in ' +str(1979+n))
+            ax3.set_ylabel('latitude')
+            ax3.set_xlabel('longitude')
+            #ax3.set_title('Precipitation + evaporation (m) at UTC time: '
+            #    +unicode(data_date)+ ' or Beijing time:'
+            #    +unicode(data_date+datetime.timedelta(hours=+8) ))
+            fig.colorbar(im,ax=ax3)
+            #fig.show()
+            #
+            print 'interpolated_total_avg_evap_rain.png'
+            #csv_name_total='interpolated_annual_average_net_evaporation_mmday_in_year_'+str(1979+n)+'.csv'
+            
+            #np.savetxt(csv_name_rain, evap_annual_avg_mmday, delimiter=",")
+            #np.savetxt(csv_name_evap, rain_annual_avg_mmday, delimiter=",")
+            #np.savetxt(csv_name_total, evap_annual_avg_mmday-rain_annual_avg_mmday, delimiter=",")
+            fig_name='interpolated_average_evap_rain_in_total.png'
+            fig.savefig(fig_name,format='png')
+            plt.close(fig)
 
-        
         
     def area(self):
         return self.x * self.y
