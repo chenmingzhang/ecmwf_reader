@@ -50,5 +50,5 @@ for n in np.arange(len(day_count_yearly)):
 
 
 np.savetxt('lats.csv', lats, delimiter=",")
-np.savetxt('lons.csv', lats, delimiter=",")
+np.savetxt('lons.csv', lons, delimiter=",")
 
