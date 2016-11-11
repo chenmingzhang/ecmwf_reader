@@ -16,7 +16,7 @@ sys.path.append(current_path+'/python/')
 py_compile.compile(current_path+'/class_cam2.py')
 import class_cam2
 reload(class_cam2)
-a=class_cam2.cam2('free.cam2.h0.exp0.2003.nc')
+a=class_cam2.cam2('/home/chenming/gis_swing_nasa/free.cam2.h0.exp0.2002.nc')
 
 
 a.plot_vapor_contour()

@@ -6,6 +6,7 @@ class Shape:
         self.y = y
     description = "This shape has not been described yet"
     author = "Nobody has claimed to make this shape yet"
+    # wangtao wants to see how one instance script is working
     def area(self):
         return self.x * self.y
     def perimeter(self):
